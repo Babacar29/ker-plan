@@ -2,11 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { listerProjets } from "@/lib/projets";
+import { logoutAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
-import { Plus, Settings, Home as HomeIcon } from "lucide-react";
+import { Plus, Settings, Home as HomeIcon, LogOut } from "lucide-react";
 
 const LABEL_STRUCTURE: Record<string, string> = {
   parpaing: "Parpaing",
@@ -46,6 +47,12 @@ export default async function DashboardPage() {
               </Link>
             }
           />
+          <form action={logoutAction}>
+            <Button type="submit" variant="ghost" size="sm">
+              <LogOut className="size-4" />
+              Déconnexion
+            </Button>
+          </form>
         </div>
       </header>
 
