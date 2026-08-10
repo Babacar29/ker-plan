@@ -16,16 +16,23 @@ import {
   poserCookieSession,
   supprimerSession,
   effacerCookieSession,
+  getSession,
 } from "@/lib/auth";
 
 export async function creerProjetAction(input: CreationProjet) {
-  const projet = await creerProjet(input);
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const projet = await creerProjet(input, session.user.id);
   revalidatePath("/");
   redirect(`/projets/${projet.id}`);
 }
 
 export async function supprimerProjetAction(id: number) {
-  await supprimerProjet(id);
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  await supprimerProjet(id, session.user.id);
   revalidatePath("/");
 }
 
