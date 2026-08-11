@@ -20,6 +20,7 @@ export default function SignupPage() {
           <form action={formAction} className="flex flex-col gap-4">
             <Input name="email" type="email" placeholder="Email" required />
             <Input name="motDePasse" type="password" placeholder="Mot de passe (8 caractères min.)" required minLength={8} />
+            <Input name="confirmationMotDePasse" type="password" placeholder="Confirmer le mot de passe" required minLength={8} />
             {state?.erreur && <p className="text-sm text-destructive">{state.erreur}</p>}
             <Button type="submit" disabled={pending}>
               {pending ? "Création…" : "Créer mon compte"}

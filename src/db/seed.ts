@@ -8,6 +8,11 @@ import { hashMotDePasse } from "../lib/auth";
  * des ordres de grandeur crédibles plutôt que des champs vides.
  */
 async function seed() {
+  if (process.env.NODE_ENV === "production") {
+    console.error("Refus d'exécuter le seed contre une base de production (NODE_ENV=production).");
+    process.exit(1);
+  }
+
   const passwordHash = await hashMotDePasse("motdepasse123");
   const [user] = await db
     .insert(users)

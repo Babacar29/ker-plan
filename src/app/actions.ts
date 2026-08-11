@@ -63,10 +63,16 @@ export async function mettreAJourRatioAction(id: number, valeur: number) {
   revalidatePath("/projets", "layout");
 }
 
-const SchemaSignup = z.object({
-  email: z.string().email("Email invalide"),
-  motDePasse: z.string().min(8, "Mot de passe : 8 caractères minimum"),
-});
+const SchemaSignup = z
+  .object({
+    email: z.string().email("Email invalide"),
+    motDePasse: z.string().min(8, "Mot de passe : 8 caractères minimum"),
+    confirmationMotDePasse: z.string(),
+  })
+  .refine((data) => data.motDePasse === data.confirmationMotDePasse, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmationMotDePasse"],
+  });
 
 export async function signupAction(
   _prevState: { erreur?: string } | undefined,
@@ -75,6 +81,7 @@ export async function signupAction(
   const parsed = SchemaSignup.safeParse({
     email: formData.get("email"),
     motDePasse: formData.get("motDePasse"),
+    confirmationMotDePasse: formData.get("confirmationMotDePasse"),
   });
   if (!parsed.success) {
     return { erreur: parsed.error.issues[0]?.message ?? "Formulaire invalide" };
