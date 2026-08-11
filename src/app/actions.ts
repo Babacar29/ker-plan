@@ -37,18 +37,27 @@ export async function supprimerProjetAction(id: number) {
 }
 
 export async function mettreAJourPrixMateriauAction(id: number, prixUnitaireFcfa: number) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
   await mettreAJourPrixMateriau(id, prixUnitaireFcfa);
   revalidatePath("/parametres");
   revalidatePath("/projets", "layout");
 }
 
 export async function mettreAJourForfaitMainOeuvreAction(id: number, forfaitFcfaM2: number) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
   await mettreAJourForfaitMainOeuvre(id, forfaitFcfaM2);
   revalidatePath("/parametres");
   revalidatePath("/projets", "layout");
 }
 
 export async function mettreAJourRatioAction(id: number, valeur: number) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
   await mettreAJourRatio(id, valeur);
   revalidatePath("/parametres");
   revalidatePath("/projets", "layout");
