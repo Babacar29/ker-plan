@@ -39,6 +39,9 @@ export type Plan = {
 export type ReponsesQuestionnaire = {
   nbChambres: number;
   salonOuvertSurCuisine: boolean;
+  nbChambresAvecToiletteInterne: number;
+  toilettesVisiteurs: boolean;
+  nbCouleurs: number;
 };
 
 const ASPECT_RATIO_EMPRISE = 1.3;
@@ -70,11 +73,21 @@ export function genererPlan(
   const profondeurM = surfaceParNiveau / largeurM;
 
   const chambresParNiveau = repartirChambres(reponses.nbChambres, nbNiveaux);
+  const chambresToiletteInterneParNiveau = repartirChambres(
+    Math.min(reponses.nbChambresAvecToiletteInterne, reponses.nbChambres),
+    nbNiveaux
+  );
 
   const niveaux: Niveau[] = [];
   for (let index = 0; index < nbNiveaux; index++) {
     const container: Rect = { x: 0, y: 0, width: largeurM, height: profondeurM };
-    const items = piecesDuNiveau(index, chambresParNiveau[index], surfaceParNiveau);
+    const items = piecesDuNiveau(
+      index,
+      chambresParNiveau[index],
+      chambresToiletteInterneParNiveau[index],
+      reponses.toilettesVisiteurs,
+      surfaceParNiveau
+    );
     const rects = layoutRects(
       items.map((it) => ({ id: it.id, weight: it.surfaceCibleM2 })),
       container
@@ -111,33 +124,72 @@ function repartirChambres(nbChambres: number, nbNiveaux: number): number[] {
 function piecesDuNiveau(
   niveauIndex: number,
   nbChambres: number,
+  nbChambresAvecToiletteInterne: number,
+  toilettesVisiteurs: boolean,
   surfaceParNiveau: number
 ): { id: string; type: TypePiece; nom: string; surfaceCibleM2: number }[] {
   const pieces: { id: string; type: TypePiece; nom: string; surfaceCibleM2: number }[] = [];
 
+  // Ratios calés sur les plans SNHLM Bambilor (F3 Moda/Mariama/Diariétou) :
+  // salon plus modeste, cuisine plus compacte, circulation/espace familial
+  // généreux, WC visiteurs réduit — la chambre parents récupère la surface
+  // économisée sous forme de salle de bain privative systématique.
+  const RATIO_SALON = 0.22;
+  const RATIO_CUISINE = 0.1;
+  const RATIO_CIRCULATION = 0.16;
+  const RATIO_WC_VISITEURS = 0.03;
+  const RATIO_SDB_PARENTS = 0.04;
+  const RATIO_SDB_SECONDAIRE = 0.035;
+
   let surfaceFixeRatio = 0;
   if (niveauIndex === 0) {
-    pieces.push({ id: "salon", type: "salon", nom: NOMS.salon, surfaceCibleM2: surfaceParNiveau * 0.28 });
-    pieces.push({ id: "cuisine", type: "cuisine", nom: NOMS.cuisine, surfaceCibleM2: surfaceParNiveau * 0.14 });
-    pieces.push({ id: "wc", type: "wc", nom: NOMS.wc, surfaceCibleM2: surfaceParNiveau * 0.05 });
-    pieces.push({ id: "circulation", type: "circulation", nom: NOMS.circulation, surfaceCibleM2: surfaceParNiveau * 0.12 });
-    surfaceFixeRatio = 0.28 + 0.14 + 0.05 + 0.12;
+    pieces.push({ id: "salon", type: "salon", nom: NOMS.salon, surfaceCibleM2: surfaceParNiveau * RATIO_SALON });
+    pieces.push({ id: "cuisine", type: "cuisine", nom: NOMS.cuisine, surfaceCibleM2: surfaceParNiveau * RATIO_CUISINE });
+    pieces.push({ id: "circulation", type: "circulation", nom: NOMS.circulation, surfaceCibleM2: surfaceParNiveau * RATIO_CIRCULATION });
+    surfaceFixeRatio = RATIO_SALON + RATIO_CUISINE + RATIO_CIRCULATION;
+    if (toilettesVisiteurs) {
+      pieces.push({ id: "wc-visiteurs", type: "wc", nom: "WC visiteurs", surfaceCibleM2: surfaceParNiveau * RATIO_WC_VISITEURS });
+      surfaceFixeRatio += RATIO_WC_VISITEURS;
+    }
   } else {
-    pieces.push({ id: `circulation-${niveauIndex}`, type: "circulation", nom: NOMS.circulation, surfaceCibleM2: surfaceParNiveau * 0.15 });
-    pieces.push({ id: `sdb-${niveauIndex}`, type: "sdb", nom: NOMS.sdb, surfaceCibleM2: surfaceParNiveau * 0.08 });
-    surfaceFixeRatio = 0.15 + 0.08;
+    pieces.push({ id: `circulation-${niveauIndex}`, type: "circulation", nom: NOMS.circulation, surfaceCibleM2: surfaceParNiveau * RATIO_CIRCULATION });
+    surfaceFixeRatio = RATIO_CIRCULATION;
   }
+
+  // La chambre parents (niveau 0, première chambre) a toujours sa propre
+  // salle de bain, comme sur tous les plans SNHLM — indépendamment du
+  // nombre de toilettes internes demandé pour les autres chambres.
+  const aChambreParents = niveauIndex === 0 && nbChambres > 0;
+  const nbToiletteInterneSecondaires = Math.max(
+    nbChambresAvecToiletteInterne - (aChambreParents ? 1 : 0),
+    0
+  );
+  surfaceFixeRatio +=
+    (aChambreParents ? RATIO_SDB_PARENTS : 0) + nbToiletteInterneSecondaires * RATIO_SDB_SECONDAIRE;
 
   const surfaceRestante = surfaceParNiveau * (1 - surfaceFixeRatio);
   if (nbChambres > 0) {
     const surfaceParChambre = surfaceRestante / nbChambres;
     for (let i = 0; i < nbChambres; i++) {
+      const estChambreParents = aChambreParents && i === 0;
       pieces.push({
         id: `chambre-${niveauIndex}-${i}`,
         type: "chambre",
-        nom: nbChambres > 1 ? `${NOMS.chambre} ${i + 1}` : NOMS.chambre,
+        nom: estChambreParents
+          ? "Chambre parents"
+          : nbChambres > 1
+            ? `${NOMS.chambre} ${i + 1}`
+            : NOMS.chambre,
         surfaceCibleM2: surfaceParChambre,
       });
+      if (estChambreParents || i < nbChambresAvecToiletteInterne) {
+        pieces.push({
+          id: `sdb-${niveauIndex}-${i}`,
+          type: "sdb",
+          nom: estChambreParents ? "SB Parents" : `SB ${i + 1}`,
+          surfaceCibleM2: surfaceParNiveau * (estChambreParents ? RATIO_SDB_PARENTS : RATIO_SDB_SECONDAIRE),
+        });
+      }
     }
   }
 

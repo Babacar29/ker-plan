@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { creerProjetAction } from "@/app/actions";
+import { creerProjetAction, modifierProjetAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { NouveauProjet } from "@/db/schema";
+import type { NouveauProjet, Projet } from "@/db/schema";
 
 type Etat = {
   nom: string;
@@ -21,6 +21,9 @@ type Etat = {
   surfaceBatieM2: string;
   nbChambres: string;
   nbNiveaux: string;
+  nbChambresAvecToiletteInterne: string;
+  toilettesVisiteurs: boolean;
+  nbCouleurs: string;
   typeStructure: NouveauProjet["typeStructure"];
   typeToiture: NouveauProjet["typeToiture"];
   standing: NouveauProjet["standing"];
@@ -33,14 +36,42 @@ const ETAT_INITIAL: Etat = {
   surfaceBatieM2: "",
   nbChambres: "3",
   nbNiveaux: "1",
+  nbChambresAvecToiletteInterne: "0",
+  toilettesVisiteurs: true,
+  nbCouleurs: "1",
   typeStructure: "parpaing",
   typeToiture: "dalle_beton",
   standing: "moyen",
   modeBriques: "usine",
 };
 
-export function NouveauProjetForm() {
-  const [etat, setEtat] = useState<Etat>(ETAT_INITIAL);
+function etatDepuisProjet(projet: Projet): Etat {
+  const reponses = projet.reponsesQuestionnaire as {
+    nbChambres: number;
+    nbChambresAvecToiletteInterne: number;
+    toilettesVisiteurs: boolean;
+    nbCouleurs: number;
+  };
+  return {
+    nom: projet.nom,
+    surfaceTerrainM2: String(projet.surfaceTerrainM2),
+    surfaceBatieM2: String(projet.surfaceBatieM2),
+    nbChambres: String(reponses.nbChambres),
+    nbNiveaux: String(projet.nbNiveaux),
+    nbChambresAvecToiletteInterne: String(reponses.nbChambresAvecToiletteInterne),
+    toilettesVisiteurs: reponses.toilettesVisiteurs,
+    nbCouleurs: String(reponses.nbCouleurs),
+    typeStructure: projet.typeStructure,
+    typeToiture: projet.typeToiture,
+    standing: projet.standing,
+    modeBriques: projet.modeBriques,
+  };
+}
+
+export function NouveauProjetForm({ projetExistant }: { projetExistant?: Projet }) {
+  const [etat, setEtat] = useState<Etat>(
+    projetExistant ? etatDepuisProjet(projetExistant) : ETAT_INITIAL
+  );
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, demarrerTransition] = useTransition();
 
@@ -53,6 +84,8 @@ export function NouveauProjetForm() {
     const surfaceBatieM2 = Number(etat.surfaceBatieM2);
     const nbChambres = Number(etat.nbChambres);
     const nbNiveaux = Number(etat.nbNiveaux);
+    const nbChambresAvecToiletteInterne = Number(etat.nbChambresAvecToiletteInterne);
+    const nbCouleurs = Number(etat.nbCouleurs);
 
     if (!etat.nom.trim()) return setErreur("Donne un nom à ton projet.");
     if (!(surfaceTerrainM2 > 0)) return setErreur("Surface du terrain invalide.");
@@ -60,27 +93,42 @@ export function NouveauProjetForm() {
     if (surfaceBatieM2 > surfaceTerrainM2) return setErreur("La surface à bâtir dépasse la surface du terrain.");
     if (!(nbChambres > 0)) return setErreur("Nombre de chambres invalide.");
     if (!(nbNiveaux > 0)) return setErreur("Nombre de niveaux invalide.");
+    if (nbChambresAvecToiletteInterne < 0 || nbChambresAvecToiletteInterne > nbChambres) {
+      return setErreur("Nombre de chambres avec toilette interne invalide.");
+    }
+    if (!(nbCouleurs > 0)) return setErreur("Nombre de couleurs invalide.");
 
     setErreur(null);
+    const input = {
+      nom: etat.nom.trim(),
+      surfaceTerrainM2,
+      surfaceBatieM2,
+      typeStructure: etat.typeStructure,
+      nbNiveaux,
+      typeToiture: etat.typeToiture,
+      standing: etat.standing,
+      modeBriques: etat.modeBriques,
+      reponsesQuestionnaire: {
+        nbChambres,
+        salonOuvertSurCuisine: false,
+        nbChambresAvecToiletteInterne,
+        toilettesVisiteurs: etat.toilettesVisiteurs,
+        nbCouleurs,
+      },
+    };
     demarrerTransition(() => {
-      creerProjetAction({
-        nom: etat.nom.trim(),
-        surfaceTerrainM2,
-        surfaceBatieM2,
-        typeStructure: etat.typeStructure,
-        nbNiveaux,
-        typeToiture: etat.typeToiture,
-        standing: etat.standing,
-        modeBriques: etat.modeBriques,
-        reponsesQuestionnaire: { nbChambres, salonOuvertSurCuisine: false },
-      });
+      if (projetExistant) {
+        modifierProjetAction(projetExistant.id, input);
+      } else {
+        creerProjetAction(input);
+      }
     });
   }
 
   return (
     <Card className="mx-auto w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Nouveau projet</CardTitle>
+        <CardTitle>{projetExistant ? "Modifier le projet" : "Nouveau projet"}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -142,6 +190,46 @@ export function NouveauProjetForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
+            <Label htmlFor="toilettesInternes">Chambres avec toilette interne</Label>
+            <Input
+              id="toilettesInternes"
+              type="number"
+              min={0}
+              max={Number(etat.nbChambres) || undefined}
+              value={etat.nbChambresAvecToiletteInterne}
+              onChange={(e) => majChamp("nbChambresAvecToiletteInterne", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Toilettes pour les visiteurs</Label>
+            <Select
+              value={etat.toilettesVisiteurs ? "oui" : "non"}
+              onValueChange={(v) => majChamp("toilettesVisiteurs", v === "oui")}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="oui">Oui</SelectItem>
+                <SelectItem value="non">Non</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="couleurs">Nombre de couloir</Label>
+            <Input
+              id="couleurs"
+              type="number"
+              min={1}
+              value={etat.nbCouleurs}
+              onChange={(e) => majChamp("nbCouleurs", e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
             <Label>Type de structure</Label>
             <Select value={etat.typeStructure} onValueChange={(v) => majChamp("typeStructure", v as Etat["typeStructure"])}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -193,7 +281,11 @@ export function NouveauProjetForm() {
         {erreur && <p className="text-sm text-destructive">{erreur}</p>}
 
         <Button className="w-full" onClick={soumettre} disabled={enCours}>
-          {enCours ? "Génération du plan…" : "Générer mon plan et mon devis"}
+          {enCours
+            ? "Génération du plan…"
+            : projetExistant
+              ? "Enregistrer les modifications"
+              : "Générer mon plan et mon devis"}
         </Button>
       </CardContent>
     </Card>

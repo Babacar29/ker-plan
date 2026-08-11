@@ -6,6 +6,7 @@ import { chargerCatalogues } from "@/lib/params";
 import { calculerCout, type LigneCout } from "@/lib/cost-engine";
 import type { Plan } from "@/lib/plan-generator";
 import { Scene3D } from "@/components/plan-3d/scene-3d";
+import { ProjetActions } from "@/components/projet-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Building2, LayoutGrid, Ruler, Boxes, HardHat } from "lucide-react";
@@ -58,9 +59,12 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
             </div>
             <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[40px]">{projet.nom}</h1>
           </div>
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Coût total estimé</p>
-            <p className="text-2xl font-semibold text-primary sm:text-3xl">{formaterFcfa(estimation.totalFcfa)}</p>
+          <div className="flex flex-col items-end gap-3">
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Coût total estimé</p>
+              <p className="text-2xl font-semibold text-primary sm:text-3xl">{formaterFcfa(estimation.totalFcfa)}</p>
+            </div>
+            <ProjetActions projetId={projet.id} projetNom={projet.nom} />
           </div>
         </div>
 
@@ -80,7 +84,7 @@ export default async function ProjetPage({ params }: { params: Promise<{ id: str
                 Aperçu 3D
               </div>
             </div>
-            <div className="h-[480px] bg-muted">
+            <div className="h-[480px] bg-card">
               <Scene3D plan={plan} />
             </div>
           </Card>
