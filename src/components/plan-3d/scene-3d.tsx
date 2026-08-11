@@ -1,8 +1,13 @@
 "use client";
 
+import { useRef, useState, type ElementRef } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment, Text } from "@react-three/drei";
-import type { Plan, TypePiece } from "@/lib/plan-generator";
+import { OrbitControls, Environment, Text, Edges } from "@react-three/drei";
+import * as THREE from "three";
+import { ZoomIn, ZoomOut, RotateCcw, RefreshCw, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Space } from "lucide-react";
+import type { Ouverture as OuvertureData, Plan, TypePiece } from "@/lib/plan-generator";
+
+const PAS_ROTATION_RAD = Math.PI / 24;
 
 const EPAISSEUR_MUR_M = 0.15;
 const HAUTEUR_NIVEAU_M = 3;
@@ -17,8 +22,15 @@ const COULEUR_PIECE: Record<TypePiece, string> = {
 };
 
 const COULEUR_MUR = "#94A3B8";
-const COULEUR_PORTE = "#D97706";
-const COULEUR_FENETRE = "#38BDF8";
+const COULEUR_PORTE = "#92400E";
+const COULEUR_POIGNEE = "#FDE68A";
+const COULEUR_FENETRE = "#7DD3FC";
+const COULEUR_MONTANT_FENETRE = "#475569";
+
+const HAUTEUR_PORTE_M = 2.1;
+const HAUTEUR_ALLEGE_FENETRE_M = 0.9;
+const HAUTEUR_LINTEAU_FENETRE_M = 2.1;
+const EPAISSEUR_PANNEAU_M = EPAISSEUR_MUR_M * 1.05;
 
 type Props = { plan: Plan };
 
@@ -27,12 +39,42 @@ export function Scene3D({ plan }: Props) {
   const profondeurTotale = plan.niveaux[0]?.profondeurM ?? 10;
   const rayonCamera = Math.max(largeurTotale, profondeurTotale) * 1.4;
 
+  const controlsRef = useRef<ElementRef<typeof OrbitControls>>(null);
+  const [autoRotate, setAutoRotate] = useState(false);
+
+  const zoom = (facteur: number) => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.dollyIn(facteur);
+    controls.update();
+  };
+
+  const pivoter = (deltaAzimuth: number, deltaPolar: number) => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    const { object: camera, target } = controls;
+    const decalage = camera.position.clone().sub(target);
+    const spherique = new THREE.Spherical().setFromVector3(decalage);
+    spherique.theta += deltaAzimuth;
+    spherique.phi += deltaPolar;
+    decalage.setFromSpherical(spherique);
+    camera.position.copy(target).add(decalage);
+    camera.lookAt(target);
+    controls.update();
+  };
+
+  const reinitialiserVue = () => {
+    controlsRef.current?.reset();
+    setAutoRotate(false);
+  };
+
   return (
-    <Canvas
-      shadows
-      camera={{ position: [rayonCamera, rayonCamera * 0.8, rayonCamera], fov: 45 }}
-      className="rounded-lg"
-    >
+    <div className="flex h-full w-full flex-col">
+      <Canvas
+        shadows
+        camera={{ position: [rayonCamera, rayonCamera * 0.8, rayonCamera], fov: 45 }}
+        className="flex-1 rounded-t-lg"
+      >
       <ambientLight intensity={0.6} />
       <directionalLight position={[10, 15, 8]} intensity={1.2} castShadow />
       <Environment preset="city" />
@@ -71,27 +113,119 @@ export function Scene3D({ plan }: Props) {
           ))}
 
           {niveau.ouvertures.map((ouverture, i) => (
-            <mesh
+            <Ouverture
               key={i}
-              position={[
-                (ouverture.x1 + ouverture.x2) / 2 - largeurTotale / 2,
-                HAUTEUR_NIVEAU_M / 2,
-                (ouverture.y1 + ouverture.y2) / 2 - profondeurTotale / 2,
-              ]}
-            >
-              <boxGeometry args={[0.25, HAUTEUR_NIVEAU_M * 0.6, 0.25]} />
-              <meshStandardMaterial
-                color={ouverture.type === "porte" ? COULEUR_PORTE : COULEUR_FENETRE}
-                emissive={ouverture.type === "porte" ? COULEUR_PORTE : COULEUR_FENETRE}
-                emissiveIntensity={0.3}
-              />
-            </mesh>
+              ouverture={ouverture}
+              largeurTotale={largeurTotale}
+              profondeurTotale={profondeurTotale}
+            />
           ))}
         </group>
       ))}
 
-      <OrbitControls makeDefault enableDamping dampingFactor={0.08} maxPolarAngle={Math.PI / 2.1} />
-    </Canvas>
+      <OrbitControls
+        ref={controlsRef}
+        makeDefault
+        enableDamping
+        dampingFactor={0.08}
+        maxPolarAngle={Math.PI / 2.1}
+        autoRotate={autoRotate}
+        autoRotateSpeed={1.2}
+      />
+      </Canvas>
+
+      
+      <div className="mt-6 flex items-center justify-between gap-4 border-border bg-card px-4 py-2.5">
+        
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => zoom(1.2)}
+            aria-label="Zoomer"
+            title="Zoomer"
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ZoomIn className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => zoom(0.8)}
+            aria-label="Dézoomer"
+            title="Dézoomer"
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ZoomOut className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setAutoRotate((v) => !v)}
+            aria-label="Rotation automatique"
+            title="Rotation automatique"
+            aria-pressed={autoRotate}
+            className={`flex size-8 items-center justify-center rounded-md transition-colors hover:bg-muted ${
+              autoRotate ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <RefreshCw className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={reinitialiserVue}
+            aria-label="Réinitialiser la vue"
+            title="Réinitialiser la vue"
+            className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <RotateCcw className="size-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 grid-rows-3 gap-0.5" role="group" aria-label="Orienter la maquette">
+          <span />
+          <button
+            type="button"
+            onClick={() => pivoter(0, -PAS_ROTATION_RAD)}
+            aria-label="Incliner vers le haut"
+            title="Incliner vers le haut"
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ChevronUp className="size-4" />
+          </button>
+          <span />
+          <button
+            type="button"
+            onClick={() => pivoter(-PAS_ROTATION_RAD, 0)}
+            aria-label="Tourner à gauche"
+            title="Tourner à gauche"
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ChevronLeft className="size-4" />
+          </button>
+          <span className="flex size-7 items-center justify-center text-muted-foreground/40">
+            <RefreshCw className="size-3.5" />
+          </span>
+          <button
+            type="button"
+            onClick={() => pivoter(PAS_ROTATION_RAD, 0)}
+            aria-label="Tourner à droite"
+            title="Tourner à droite"
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ChevronRight className="size-4" />
+          </button>
+          <span />
+          <button
+            type="button"
+            onClick={() => pivoter(0, PAS_ROTATION_RAD)}
+            aria-label="Incliner vers le bas"
+            title="Incliner vers le bas"
+            className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ChevronDown className="size-4" />
+          </button>
+          <span />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -128,5 +262,75 @@ function MursPiece({
         </mesh>
       ))}
     </>
+  );
+}
+
+/**
+ * Panneau plat encastré dans le mur, orienté selon le segment d'ouverture.
+ * Porte : panneau plein sol-linteau + poignée. Fenêtre : vitrage semi-transparent
+ * posé sur allège, avec croisillon — formes distinctes pour rester reconnaissables.
+ */
+function Ouverture({
+  ouverture,
+  largeurTotale,
+  profondeurTotale,
+}: {
+  ouverture: OuvertureData;
+  largeurTotale: number;
+  profondeurTotale: number;
+}) {
+  const dx = ouverture.x2 - ouverture.x1;
+  const dz = ouverture.y2 - ouverture.y1;
+  const longueur = Math.max(Math.hypot(dx, dz), 0.6);
+  const rotationY = -Math.atan2(dz, dx);
+  const cx = (ouverture.x1 + ouverture.x2) / 2 - largeurTotale / 2;
+  const cz = (ouverture.y1 + ouverture.y2) / 2 - profondeurTotale / 2;
+  const largeurPanneau = longueur * 0.9;
+
+  if (ouverture.type === "porte") {
+    return (
+      <group position={[cx, 0, cz]} rotation={[0, rotationY, 0]}>
+        <mesh position={[0, HAUTEUR_PORTE_M / 2, 0]} castShadow>
+          <boxGeometry args={[largeurPanneau, HAUTEUR_PORTE_M, EPAISSEUR_PANNEAU_M]} />
+          <meshStandardMaterial color={COULEUR_PORTE} />
+          <Edges color="#451A03" />
+        </mesh>
+        <mesh position={[largeurPanneau * 0.32, HAUTEUR_PORTE_M * 0.48, EPAISSEUR_PANNEAU_M * 0.6]}>
+          <sphereGeometry args={[0.04, 12, 12]} />
+          <meshStandardMaterial color={COULEUR_POIGNEE} metalness={0.6} roughness={0.3} />
+        </mesh>
+      </group>
+    );
+  }
+
+  const hauteurVitrage = HAUTEUR_LINTEAU_FENETRE_M - HAUTEUR_ALLEGE_FENETRE_M;
+  const centreY = HAUTEUR_ALLEGE_FENETRE_M + hauteurVitrage / 2;
+
+  return (
+    <group position={[cx, 0, cz]} rotation={[0, rotationY, 0]}>
+      <mesh position={[0, centreY, 0]}>
+        <boxGeometry args={[largeurPanneau, hauteurVitrage, EPAISSEUR_PANNEAU_M]} />
+        <meshPhysicalMaterial
+          color={COULEUR_FENETRE}
+          transparent
+          opacity={0.35}
+          roughness={0.1}
+          metalness={0.1}
+          transmission={0.4}
+        />
+      </mesh>
+      <mesh position={[0, centreY, 0]}>
+        <boxGeometry args={[largeurPanneau, hauteurVitrage, EPAISSEUR_PANNEAU_M * 1.02]} />
+        <meshStandardMaterial color={COULEUR_MONTANT_FENETRE} wireframe />
+      </mesh>
+      <mesh position={[0, centreY, 0]}>
+        <boxGeometry args={[largeurPanneau * 0.03, hauteurVitrage, EPAISSEUR_PANNEAU_M * 1.05]} />
+        <meshStandardMaterial color={COULEUR_MONTANT_FENETRE} />
+      </mesh>
+      <mesh position={[0, centreY, 0]}>
+        <boxGeometry args={[largeurPanneau, hauteurVitrage * 0.05, EPAISSEUR_PANNEAU_M * 1.05]} />
+        <meshStandardMaterial color={COULEUR_MONTANT_FENETRE} />
+      </mesh>
+    </group>
   );
 }

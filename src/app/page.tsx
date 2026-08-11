@@ -24,14 +24,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
-      <header className="flex items-center justify-between gap-4 mb-10">
+      <header className="flex items-center justify-between gap-4 mb-10 border-b border-border pb-8">
         <div className="flex flex-col gap-2">
           <Logo />
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Tes projets</h1>
+          <h1 className="text-[34px] font-semibold tracking-tight text-foreground">Tes projets</h1>
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
+            nativeButton={false}
             render={
               <Link href="/parametres">
                 <Settings className="size-4" />
@@ -40,6 +41,7 @@ export default async function DashboardPage() {
             }
           />
           <Button
+            nativeButton={false}
             render={
               <Link href="/nouveau">
                 <Plus className="size-4" />
@@ -67,6 +69,7 @@ export default async function DashboardPage() {
               </p>
             </div>
             <Button
+              nativeButton={false}
               render={
                 <Link href="/nouveau">
                   <Plus className="size-4" />
@@ -80,11 +83,11 @@ export default async function DashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {projets.map((projet) => (
             <Link key={projet.id} href={`/projets/${projet.id}`} className="cursor-pointer">
-              <Card className="h-full transition-shadow hover:shadow-lg">
+              <Card className="h-full transition-colors hover:border-primary/40">
                 <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+                  <CardTitle className="flex items-center justify-between text-[17px] font-semibold">
                     {projet.nom}
-                    <Badge variant="secondary">R+{projet.nbNiveaux - 1}</Badge>
+                    <Badge>R+{projet.nbNiveaux - 1}</Badge>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1 text-sm text-muted-foreground">

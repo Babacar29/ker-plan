@@ -4,8 +4,8 @@ type LogoProps = {
 };
 
 export function LogoMark({ className, variant = "color" }: LogoProps) {
-  const stroke = variant === "mono-light" ? "#FFFFFF" : "#1E3A5F";
-  const accent = variant === "mono-light" ? "#10B981" : "#059669";
+  const stroke = variant === "mono-light" ? "#FFFFFF" : "#1d1d1f";
+  const accent = variant === "mono-light" ? "#2997ff" : "#0066cc";
 
   return (
     <svg
@@ -32,9 +32,9 @@ export function Logo({ className }: { className?: string }) {
   return (
     <div className={`flex items-center gap-[0.6rem] ${className ?? ""}`}>
       <LogoMark className="h-10 w-10" />
-      <span className="text-[1.6rem] font-extrabold tracking-[-0.03em]">
-        <span className="text-[#1E3A5F] dark:text-white">ker</span>
-        <span className="text-[#059669]">-plan</span>
+      <span className="text-[1.6rem] font-semibold tracking-[-0.03em]">
+        <span className="text-[#1d1d1f] dark:text-white">ker</span>
+        <span className="text-[#0066cc]">-plan</span>
       </span>
     </div>
   );

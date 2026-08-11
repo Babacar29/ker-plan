@@ -12,7 +12,7 @@ export default async function NouveauProjetPage() {
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
       <Link
         href="/"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        className="mb-6 inline-flex items-center gap-2 text-[17px] text-primary transition-colors hover:underline"
       >
         <ArrowLeft className="size-4" />
         Retour aux projets
