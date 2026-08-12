@@ -58,3 +58,32 @@ export async function creerProjet(input: CreationProjet, userId: number): Promis
 export async function supprimerProjet(id: number, userId: number): Promise<void> {
   await db.delete(projets).where(and(eq(projets.id, id), eq(projets.userId, userId)));
 }
+
+/** Met à jour un projet et régénère son plan à partir du questionnaire modifié. */
+export async function modifierProjet(
+  id: number,
+  input: CreationProjet,
+  userId: number
+): Promise<Projet | undefined> {
+  const plan = genererPlan(input.reponsesQuestionnaire, input.surfaceBatieM2, input.nbNiveaux);
+
+  const [projet] = await db
+    .update(projets)
+    .set({
+      nom: input.nom,
+      surfaceTerrainM2: String(input.surfaceTerrainM2),
+      surfaceBatieM2: String(input.surfaceBatieM2),
+      typeStructure: input.typeStructure,
+      nbNiveaux: input.nbNiveaux,
+      typeToiture: input.typeToiture,
+      standing: input.standing,
+      modeBriques: input.modeBriques,
+      reponsesQuestionnaire: input.reponsesQuestionnaire,
+      planGenere: plan,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(projets.id, id), eq(projets.userId, userId)))
+    .returning();
+
+  return projet;
+}

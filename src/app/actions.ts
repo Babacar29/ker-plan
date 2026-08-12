@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
-import { creerProjet, supprimerProjet, type CreationProjet } from "@/lib/projets";
+import { creerProjet, supprimerProjet, modifierProjet, type CreationProjet } from "@/lib/projets";
 import { mettreAJourPrixMateriau, mettreAJourForfaitMainOeuvre, mettreAJourRatio } from "@/lib/params";
 import {
   hashMotDePasse,
@@ -34,6 +34,17 @@ export async function supprimerProjetAction(id: number) {
 
   await supprimerProjet(id, session.user.id);
   revalidatePath("/");
+  redirect("/");
+}
+
+export async function modifierProjetAction(id: number, input: CreationProjet) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  await modifierProjet(id, input, session.user.id);
+  revalidatePath("/");
+  revalidatePath(`/projets/${id}`);
+  redirect(`/projets/${id}`);
 }
 
 export async function mettreAJourPrixMateriauAction(id: number, prixUnitaireFcfa: number) {
