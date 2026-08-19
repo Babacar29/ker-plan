@@ -18,7 +18,7 @@ const COULEUR_PIECE: Record<TypePiece, string> = {
   cuisine: "#FDE68A",
   chambre: "#BFDBFE",
   wc: "#D1D5DB",
-  circulation: "#F1F5F9",
+  circulation: "#E4D8C3",
   sdb: "#A7F3D0",
 };
 
