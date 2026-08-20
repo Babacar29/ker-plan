@@ -313,7 +313,7 @@ function MursPiece({
       {murs.map((mur, i) => (
         <mesh key={i} position={[mur.pos[0], HAUTEUR_NIVEAU_M / 2, mur.pos[1]]} castShadow receiveShadow>
           <boxGeometry args={[mur.taille[0], HAUTEUR_NIVEAU_M, mur.taille[1]]} />
-          <meshStandardMaterial color={COULEUR_MUR} transparent opacity={0.85} />
+          <meshStandardMaterial color={COULEUR_MUR} transparent opacity={0.4} />
         </mesh>
       ))}
     </>
