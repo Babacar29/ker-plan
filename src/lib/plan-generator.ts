@@ -44,6 +44,7 @@ export type ReponsesQuestionnaire = {
   nbCouleurs: number;
 };
 
+const RATIO_CIRCULATION_DEFAUT = 0.16;
 const ASPECT_RATIO_EMPRISE = 1.3;
 const TOLERANCE_ADJACENCE_M = 0.15;
 const LONGUEUR_MIN_OUVERTURE_M = 0.8;
@@ -66,7 +67,8 @@ const NOMS: Record<TypePiece, string> = {
 export function genererPlan(
   reponses: ReponsesQuestionnaire,
   surfaceEmpriseM2: number,
-  nbNiveaux: number
+  nbNiveaux: number,
+  ratioCirculation: number = RATIO_CIRCULATION_DEFAUT
 ): Plan {
   const surfaceParNiveau = surfaceEmpriseM2;
   const largeurM = Math.sqrt(surfaceParNiveau * ASPECT_RATIO_EMPRISE);
@@ -86,7 +88,8 @@ export function genererPlan(
       chambresParNiveau[index],
       chambresToiletteInterneParNiveau[index],
       reponses.toilettesVisiteurs,
-      surfaceParNiveau
+      surfaceParNiveau,
+      ratioCirculation
     );
     const rects = layoutRects(
       items.map((it) => ({ id: it.id, weight: it.surfaceCibleM2 })),
@@ -126,7 +129,8 @@ function piecesDuNiveau(
   nbChambres: number,
   nbChambresAvecToiletteInterne: number,
   toilettesVisiteurs: boolean,
-  surfaceParNiveau: number
+  surfaceParNiveau: number,
+  ratioCirculation: number
 ): { id: string; type: TypePiece; nom: string; surfaceCibleM2: number }[] {
   const pieces: { id: string; type: TypePiece; nom: string; surfaceCibleM2: number }[] = [];
 
@@ -134,9 +138,10 @@ function piecesDuNiveau(
   // salon plus modeste, cuisine plus compacte, circulation/espace familial
   // généreux, WC visiteurs réduit — la chambre parents récupère la surface
   // économisée sous forme de salle de bain privative systématique.
+  // Circulation ajustable depuis Paramètres (ratio_circulation_par_m2_batie).
   const RATIO_SALON = 0.22;
   const RATIO_CUISINE = 0.1;
-  const RATIO_CIRCULATION = 0.16;
+  const RATIO_CIRCULATION = ratioCirculation;
   const RATIO_WC_VISITEURS = 0.03;
   const RATIO_SDB_PARENTS = 0.04;
   const RATIO_SDB_SECONDAIRE = 0.035;

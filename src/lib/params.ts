@@ -12,6 +12,12 @@ export async function chargerCatalogues() {
   return { materiaux: listeMateriaux, mainOeuvre: listeMainOeuvre, ratios: listeRatios };
 }
 
+/** Lit un ratio unique par clé — utilisé par le générateur de plan hors du contexte /parametres. */
+export async function obtenirRatio(cle: string): Promise<number | undefined> {
+  const [ratio] = await db.select().from(ratiosConstruction).where(eq(ratiosConstruction.cle, cle));
+  return ratio ? Number(ratio.valeur) : undefined;
+}
+
 export async function mettreAJourPrixMateriau(id: number, prixUnitaireFcfa: number) {
   await db.update(materiaux).set({ prixUnitaireFcfa: String(prixUnitaireFcfa) }).where(eq(materiaux.id, id));
 }

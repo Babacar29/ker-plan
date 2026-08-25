@@ -2,6 +2,9 @@ import { db } from "@/db";
 import { projets, type Projet, type NouveauProjet } from "@/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { genererPlan, type ReponsesQuestionnaire } from "./plan-generator";
+import { obtenirRatio } from "./params";
+
+const CLE_RATIO_CIRCULATION = "ratio_circulation_par_m2_batie";
 
 export type CreationProjet = {
   nom: string;
@@ -33,7 +36,8 @@ export async function obtenirProjet(id: number, userId: number): Promise<Projet 
 
 /** Crée un projet et génère son plan immédiatement à partir du questionnaire. */
 export async function creerProjet(input: CreationProjet, userId: number): Promise<Projet> {
-  const plan = genererPlan(input.reponsesQuestionnaire, input.surfaceBatieM2, input.nbNiveaux);
+  const ratioCirculation = await obtenirRatio(CLE_RATIO_CIRCULATION);
+  const plan = genererPlan(input.reponsesQuestionnaire, input.surfaceBatieM2, input.nbNiveaux, ratioCirculation);
 
   const [projet] = await db
     .insert(projets)
@@ -65,7 +69,8 @@ export async function modifierProjet(
   input: CreationProjet,
   userId: number
 ): Promise<Projet | undefined> {
-  const plan = genererPlan(input.reponsesQuestionnaire, input.surfaceBatieM2, input.nbNiveaux);
+  const ratioCirculation = await obtenirRatio(CLE_RATIO_CIRCULATION);
+  const plan = genererPlan(input.reponsesQuestionnaire, input.surfaceBatieM2, input.nbNiveaux, ratioCirculation);
 
   const [projet] = await db
     .update(projets)

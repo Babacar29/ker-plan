@@ -23,11 +23,12 @@ async function seed() {
   console.log(`Utilisateur de test : test@kerplan.sn / motdepasse123 (id=${user?.id ?? "existant"})`);
 
   await db.insert(materiaux).values([
-    { cle: "ciment_sac_50kg", libelle: "Ciment (sac 50kg)", prixUnitaireFcfa: "4500", unite: "sac" },
-    { cle: "fer_a_beton_12", libelle: "Fer à béton Ø12 (barre 12m)", prixUnitaireFcfa: "6500", unite: "barre" },
+    { cle: "ciment_sac_50kg", libelle: "Ciment (sac 50kg)", prixUnitaireFcfa: "3500", unite: "sac" },
+    { cle: "fer_a_beton_kg", libelle: "Fer à béton (au poids, tous diamètres)", prixUnitaireFcfa: "400", unite: "kg" },
     { cle: "brique_parpaing_usine", libelle: "Parpaing 15x20x40 (usine)", prixUnitaireFcfa: "300", unite: "unité" },
-    { cle: "sable_m3", libelle: "Sable", prixUnitaireFcfa: "12000", unite: "m³" },
-    { cle: "gravier_m3", libelle: "Gravier", prixUnitaireFcfa: "15000", unite: "m³" },
+    { cle: "sable_m3", libelle: "Sable construction (extérieur)", prixUnitaireFcfa: "4500", unite: "m³" },
+    { cle: "sable_interieur_m3", libelle: "Sable intérieur (fin)", prixUnitaireFcfa: "6000", unite: "m³" },
+    { cle: "gravier_m3", libelle: "Gravier / béton concassé", prixUnitaireFcfa: "9000", unite: "m³" },
     { cle: "tole_bac_alu_feuille", libelle: "Tôle bac alu", prixUnitaireFcfa: "8500", unite: "feuille" },
     { cle: "carrelage_m2_moyen", libelle: "Carrelage (standing moyen)", prixUnitaireFcfa: "6000", unite: "m²" },
     { cle: "peinture_litre", libelle: "Peinture", prixUnitaireFcfa: "3500", unite: "litre" },
@@ -52,6 +53,7 @@ async function seed() {
     { cle: "litres_peinture_par_m2_mur", libelle: "Litres de peinture par m² de mur", valeur: "0.3", unite: "litre/m²" },
     { cle: "surface_par_feuille_tole_m2", libelle: "Surface couverte par feuille de tôle", valeur: "3", unite: "m²/feuille" },
     { cle: "majoration_sacs_ciment_joints_murs", libelle: "Majoration sacs ciment pour joints de murs", valeur: "0.2", unite: "ratio" },
+    { cle: "ratio_circulation_par_m2_batie", libelle: "Surface de circulation par m² bâti", valeur: "0.16", unite: "ratio" },
   ]).onConflictDoNothing();
 
   console.log("Seed terminé.");

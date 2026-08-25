@@ -163,7 +163,9 @@ function Maquette3D({ plan, className = "" }: { plan: Plan; className?: string }
               >
                 {piece.nom}
               </Text>
-              <MursPiece rect={piece.rect} largeurTotale={largeurTotale} profondeurTotale={profondeurTotale} />
+              {piece.type !== "circulation" && (
+                <MursPiece rect={piece.rect} largeurTotale={largeurTotale} profondeurTotale={profondeurTotale} />
+              )}
             </group>
           ))}
 
