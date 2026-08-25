@@ -84,3 +84,37 @@ export type NouveauProjet = typeof projets.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type NouvelUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
+
+export const statutPlanReferenceEnum = pgEnum("statut_plan_reference", [
+  "brouillon",
+  "valide",
+]);
+
+/** Un plan de référence ingéré depuis une image (photo/capture d'écran d'un vrai plan). */
+export const plansReference = pgTable("plans_reference", {
+  id: serial("id").primaryKey(),
+  source: text("source"),
+  imageUrl: text("image_url").notNull(),
+  empriseM2: numeric("emprise_m2", { precision: 10, scale: 2 }),
+  largeurM: numeric("largeur_m", { precision: 10, scale: 2 }),
+  profondeurM: numeric("profondeur_m", { precision: 10, scale: 2 }),
+  nbNiveaux: integer("nb_niveaux").notNull().default(1),
+  statut: statutPlanReferenceEnum("statut").notNull().default("brouillon"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/** Pièce extraite d'un plan de référence. Type non contraint à TypePiece : le
+ * mapping vers les types du générateur se fera en phase 2. */
+export const plansReferencePieces = pgTable("plans_reference_pieces", {
+  id: serial("id").primaryKey(),
+  planReferenceId: integer("plan_reference_id")
+    .notNull()
+    .references(() => plansReference.id, { onDelete: "cascade" }),
+  typeExtrait: text("type_extrait").notNull(),
+  nom: text("nom").notNull(),
+  surfaceM2: numeric("surface_m2", { precision: 10, scale: 2 }).notNull(),
+});
+
+export type PlanReference = typeof plansReference.$inferSelect;
+export type NouveauPlanReference = typeof plansReference.$inferInsert;
+export type PlanReferencePiece = typeof plansReferencePieces.$inferSelect;
