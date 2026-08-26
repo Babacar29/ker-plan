@@ -50,8 +50,12 @@ export async function uploaderPlanAction(formData: FormData): Promise<void> {
 
 export async function relancerExtractionAction(id: number, imageUrl: string): Promise<void> {
   await exigerSession();
-  const donnees = await extraireDonneesPlan(imageUrl);
-  await enregistrerExtraction(id, donnees);
+  try {
+    const donnees = await extraireDonneesPlan(imageUrl);
+    await enregistrerExtraction(id, donnees);
+  } catch {
+    // Extraction toujours en échec ; l'écran de revue reste sur "extraction échouée".
+  }
   revalidatePath(`/banque-plans/${id}`);
 }
 
