@@ -68,6 +68,8 @@ export const projets = pgTable("projets", {
   typeToiture: typeToitureEnum("type_toiture").notNull().default("dalle_beton"),
   standing: standingEnum("standing").notNull().default("moyen"),
   modeBriques: modeBriquesEnum("mode_briques").notNull().default("usine"),
+  planReferenceId: integer("plan_reference_id")
+    .references(() => plansReference.id, { onDelete: "set null" }),
 
   reponsesQuestionnaire: jsonb("reponses_questionnaire").notNull(),
   planGenere: jsonb("plan_genere"),
@@ -113,6 +115,11 @@ export const plansReferencePieces = pgTable("plans_reference_pieces", {
   typeExtrait: text("type_extrait").notNull(),
   nom: text("nom").notNull(),
   surfaceM2: numeric("surface_m2", { precision: 10, scale: 2 }).notNull(),
+  niveauIndex: integer("niveau_index").notNull().default(0),
+  xM: numeric("x_m", { precision: 10, scale: 2 }),
+  yM: numeric("y_m", { precision: 10, scale: 2 }),
+  largeurM: numeric("largeur_m", { precision: 10, scale: 2 }),
+  profondeurM: numeric("profondeur_m", { precision: 10, scale: 2 }),
 });
 
 export type PlanReference = typeof plansReference.$inferSelect;
