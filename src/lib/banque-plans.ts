@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { plansReference, plansReferencePieces } from "@/db/schema";
 import type { PlanReference, PlanReferencePiece } from "@/db/schema";
 import type { ExtractionPlan } from "@/lib/extraction-plan";
+import type { TypePiece } from "@/lib/plan-generator";
 import { eq } from "drizzle-orm";
 
 export function ratioPiece(
@@ -85,4 +86,56 @@ export async function validerPlanReference(id: number): Promise<void> {
 
 export async function supprimerPlanReference(id: number): Promise<void> {
   await db.delete(plansReference).where(eq(plansReference.id, id));
+}
+
+const CORRESPONDANCE_TYPE_EXTRAIT: Record<string, TypePiece> = {
+  salon: "salon",
+  cuisine: "cuisine",
+  chambre: "chambre",
+  wc: "wc",
+  circulation: "circulation",
+  sdb: "sdb",
+};
+
+/** Mappe un libellé de type brut extrait d'un plan vers un TypePiece du
+ * générateur. Retourne null pour tout libellé sans correspondance connue
+ * (ex: "cour", "patio", "garage"). */
+export function mapperTypeExtrait(typeExtrait: string): TypePiece | null {
+  return CORRESPONDANCE_TYPE_EXTRAIT[typeExtrait.toLowerCase().trim()] ?? null;
+}
+
+/** Calcule, pour chaque TypePiece, le ratio moyen (surface pièce / emprise
+ * du plan) sur l'ensemble des plans validés de la banque. Types non mappés
+ * ignorés. Mapping vide si aucun plan validé. */
+export async function calculerRatiosDepuisBanque(): Promise<Partial<Record<TypePiece, number>>> {
+  const plansValides = await db
+    .select()
+    .from(plansReference)
+    .where(eq(plansReference.statut, "valide"));
+
+  const sommes = new Map<TypePiece, { total: number; count: number }>();
+
+  for (const plan of plansValides) {
+    const emprise = Number(plan.empriseM2);
+    if (!emprise) continue;
+
+    const pieces = await db
+      .select()
+      .from(plansReferencePieces)
+      .where(eq(plansReferencePieces.planReferenceId, plan.id));
+
+    for (const piece of pieces) {
+      const type = mapperTypeExtrait(piece.typeExtrait);
+      if (!type) continue;
+      const ratio = Number(piece.surfaceM2) / emprise;
+      const courant = sommes.get(type) ?? { total: 0, count: 0 };
+      sommes.set(type, { total: courant.total + ratio, count: courant.count + 1 });
+    }
+  }
+
+  const resultat: Partial<Record<TypePiece, number>> = {};
+  for (const [type, { total, count }] of sommes) {
+    resultat[type] = total / count;
+  }
+  return resultat;
 }

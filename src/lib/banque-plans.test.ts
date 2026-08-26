@@ -1,5 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { ratioPiece, enregistrerExtraction, obtenirPlanReference, creerPlanReferenceBrouillon } from "./banque-plans";
+import { describe, it, expect, beforeEach } from "vitest";
+import { db } from "@/db";
+import { plansReference } from "@/db/schema";
+import { ratioPiece, enregistrerExtraction, obtenirPlanReference, creerPlanReferenceBrouillon, mapperTypeExtrait, calculerRatiosDepuisBanque, validerPlanReference } from "./banque-plans";
 
 describe("ratioPiece", () => {
   it("calcule le ratio surface pièce / emprise", () => {
@@ -44,5 +46,66 @@ describe("enregistrerExtraction (phase 2 : position)", () => {
     expect(resultat?.pieces[0].niveauIndex).toBe(0);
     expect(Number(resultat?.pieces[0].xM)).toBe(0);
     expect(Number(resultat?.pieces[0].largeurM)).toBe(5);
+  });
+});
+
+describe("mapperTypeExtrait", () => {
+  it("mappe les libellés connus vers TypePiece", () => {
+    expect(mapperTypeExtrait("chambre")).toBe("chambre");
+    expect(mapperTypeExtrait("salon")).toBe("salon");
+    expect(mapperTypeExtrait("cuisine")).toBe("cuisine");
+    expect(mapperTypeExtrait("sdb")).toBe("sdb");
+    expect(mapperTypeExtrait("wc")).toBe("wc");
+    expect(mapperTypeExtrait("circulation")).toBe("circulation");
+  });
+
+  it("est insensible à la casse", () => {
+    expect(mapperTypeExtrait("Chambre")).toBe("chambre");
+  });
+
+  it("retourne null pour un libellé non reconnu", () => {
+    expect(mapperTypeExtrait("cour")).toBeNull();
+    expect(mapperTypeExtrait("garage")).toBeNull();
+  });
+});
+
+describe("calculerRatiosDepuisBanque", () => {
+  beforeEach(async () => {
+    await db.delete(plansReference);
+  });
+
+  it("retourne un mapping vide si aucun plan validé", async () => {
+    const ratios = await calculerRatiosDepuisBanque();
+    expect(ratios).toEqual({});
+  });
+
+  it("calcule la moyenne des ratios sur plusieurs plans validés", async () => {
+    const plan1 = await creerPlanReferenceBrouillon("https://example.com/p1.png");
+    await enregistrerExtraction(plan1.id, {
+      empriseM2: 100,
+      largeurM: 10,
+      profondeurM: 10,
+      nbNiveaux: 1,
+      pieces: [
+        { nom: "Salon", typeExtrait: "salon", surfaceM2: 20, niveauIndex: 0, xM: 0, yM: 0, largeurM: 5, profondeurM: 4 },
+      ],
+    });
+    await validerPlanReference(plan1.id);
+
+    const plan2 = await creerPlanReferenceBrouillon("https://example.com/p2.png");
+    await enregistrerExtraction(plan2.id, {
+      empriseM2: 200,
+      largeurM: 14,
+      profondeurM: 14,
+      nbNiveaux: 1,
+      pieces: [
+        { nom: "Salon", typeExtrait: "salon", surfaceM2: 60, niveauIndex: 0, xM: 0, yM: 0, largeurM: 8, profondeurM: 7 },
+      ],
+    });
+    await validerPlanReference(plan2.id);
+
+    const ratios = await calculerRatiosDepuisBanque();
+    // (0.20 + 0.30) / 2 = 0.25
+    expect(ratios.salon).toBeCloseTo(0.25, 5);
   });
 });
