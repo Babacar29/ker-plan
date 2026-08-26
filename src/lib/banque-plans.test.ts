@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { db } from "@/db";
 import { plansReference } from "@/db/schema";
 import { inArray } from "drizzle-orm";
@@ -73,15 +73,6 @@ describe("mapperTypeExtrait", () => {
 describe("calculerRatiosDepuisBanque", () => {
   let createdPlanIds: number[] = [];
 
-  beforeAll(async () => {
-    // Clean up any leftover validated plans from previous test runs
-    const allPlans = await db.select().from(plansReference);
-    const validatedIds = allPlans.filter((p) => p.statut === "valide").map((p) => p.id);
-    if (validatedIds.length > 0) {
-      await db.delete(plansReference).where(inArray(plansReference.id, validatedIds));
-    }
-  });
-
   beforeEach(() => {
     createdPlanIds = [];
   });
@@ -131,8 +122,21 @@ describe("calculerRatiosDepuisBanque", () => {
 });
 
 describe("listerPlansReferenceValides", () => {
+  let createdPlanIds: number[] = [];
+
+  beforeEach(() => {
+    createdPlanIds = [];
+  });
+
+  afterEach(async () => {
+    if (createdPlanIds.length > 0) {
+      await db.delete(plansReference).where(inArray(plansReference.id, createdPlanIds));
+    }
+  });
+
   it("exclut les plans brouillon", async () => {
     const plan = await creerPlanReferenceBrouillon("https://example.com/brouillon.png");
+    createdPlanIds.push(plan.id);
     await enregistrerExtraction(plan.id, {
       empriseM2: 100, largeurM: 10, profondeurM: 10, nbNiveaux: 1,
       pieces: [{ nom: "Chambre 1", typeExtrait: "chambre", surfaceM2: 12, niveauIndex: 0, xM: 0, yM: 0, largeurM: 3, profondeurM: 4 }],
@@ -143,6 +147,7 @@ describe("listerPlansReferenceValides", () => {
 
   it("inclut un plan validé avec position complète", async () => {
     const plan = await creerPlanReferenceBrouillon("https://example.com/complet.png");
+    createdPlanIds.push(plan.id);
     await enregistrerExtraction(plan.id, {
       empriseM2: 100, largeurM: 10, profondeurM: 10, nbNiveaux: 1,
       pieces: [{ nom: "Chambre 1", typeExtrait: "chambre", surfaceM2: 12, niveauIndex: 0, xM: 0, yM: 0, largeurM: 3, profondeurM: 4 }],
@@ -154,6 +159,7 @@ describe("listerPlansReferenceValides", () => {
 
   it("filtre par nbChambresMin", async () => {
     const plan = await creerPlanReferenceBrouillon("https://example.com/2ch.png");
+    createdPlanIds.push(plan.id);
     await enregistrerExtraction(plan.id, {
       empriseM2: 100, largeurM: 10, profondeurM: 10, nbNiveaux: 1,
       pieces: [

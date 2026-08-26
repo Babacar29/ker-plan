@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { NouveauProjet, Projet } from "@/db/schema";
-import type { PlanReferenceAvecPieces } from "@/lib/banque-plans";
+import { mapperTypeExtrait, type PlanReferenceAvecPieces } from "@/lib/banque-plans";
 
 type Etat = {
   nom: string;
@@ -91,7 +91,7 @@ export function NouveauProjetForm({
 
   const nbChambresDemande = Number(etat.nbChambres) || 0;
   const plansCompatibles = plansDisponibles.filter(
-    (p) => p.pieces.filter((piece) => piece.typeExtrait.toLowerCase() === "chambre").length >= nbChambresDemande
+    (p) => p.pieces.filter((piece) => mapperTypeExtrait(piece.typeExtrait) === "chambre").length >= nbChambresDemande
   );
 
   function soumettre() {

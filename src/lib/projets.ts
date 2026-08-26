@@ -23,16 +23,24 @@ export type CreationProjet = {
 /** Génère le plan d'un projet : copie exacte si un planReferenceId est
  * fourni et éligible, sinon génération par ratios (dérivés de la banque
  * de plans validés si disponible, sinon constantes par défaut). */
-async function genererPlanPourProjet(input: CreationProjet): Promise<Plan> {
+async function genererPlanPourProjet(
+  input: CreationProjet
+): Promise<{ plan: Plan; planReferenceId: number | null }> {
   if (input.planReferenceId) {
     const reference = await obtenirPlanReference(input.planReferenceId);
     if (reference) {
-      return genererPlanDepuisReference(reference, input.surfaceBatieM2, input.nbNiveaux);
+      return {
+        plan: genererPlanDepuisReference(reference, input.surfaceBatieM2, input.nbNiveaux),
+        planReferenceId: input.planReferenceId,
+      };
     }
   }
   const ratioCirculation = await obtenirRatio(CLE_RATIO_CIRCULATION);
   const ratios = await calculerRatiosDepuisBanque();
-  return genererPlan(input.reponsesQuestionnaire, input.surfaceBatieM2, input.nbNiveaux, ratioCirculation, ratios);
+  return {
+    plan: genererPlan(input.reponsesQuestionnaire, input.surfaceBatieM2, input.nbNiveaux, ratioCirculation, ratios),
+    planReferenceId: null,
+  };
 }
 
 export async function listerProjets(userId: number): Promise<Projet[]> {
@@ -53,7 +61,7 @@ export async function obtenirProjet(id: number, userId: number): Promise<Projet 
 
 /** Crée un projet et génère son plan immédiatement à partir du questionnaire. */
 export async function creerProjet(input: CreationProjet, userId: number): Promise<Projet> {
-  const plan = await genererPlanPourProjet(input);
+  const { plan, planReferenceId } = await genererPlanPourProjet(input);
 
   const [projet] = await db
     .insert(projets)
@@ -68,7 +76,7 @@ export async function creerProjet(input: CreationProjet, userId: number): Promis
       standing: input.standing,
       modeBriques: input.modeBriques,
       reponsesQuestionnaire: input.reponsesQuestionnaire,
-      planReferenceId: input.planReferenceId ?? null,
+      planReferenceId,
       planGenere: plan,
     })
     .returning();
@@ -86,7 +94,7 @@ export async function modifierProjet(
   input: CreationProjet,
   userId: number
 ): Promise<Projet | undefined> {
-  const plan = await genererPlanPourProjet(input);
+  const { plan, planReferenceId } = await genererPlanPourProjet(input);
 
   const [projet] = await db
     .update(projets)
@@ -100,7 +108,7 @@ export async function modifierProjet(
       standing: input.standing,
       modeBriques: input.modeBriques,
       reponsesQuestionnaire: input.reponsesQuestionnaire,
-      planReferenceId: input.planReferenceId ?? null,
+      planReferenceId,
       planGenere: plan,
       updatedAt: new Date(),
     })

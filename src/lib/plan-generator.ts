@@ -130,8 +130,12 @@ const CORRESPONDANCE_TYPE_EXTRAIT_LOCALE: Record<string, TypePiece> = {
   sdb: "sdb",
 };
 
-function mapperTypeExtraitLocal(typeExtrait: string): TypePiece {
-  return CORRESPONDANCE_TYPE_EXTRAIT_LOCALE[typeExtrait.toLowerCase().trim()] ?? "circulation";
+/** Mappe un libellé de type brut extrait d'un plan vers un TypePiece du
+ * générateur. Retourne null pour tout libellé sans correspondance connue
+ * (ex: "cour", "patio", "garage", "terrasse") plutôt que de le classer à
+ * tort en circulation. */
+function mapperTypeExtraitLocal(typeExtrait: string): TypePiece | null {
+  return CORRESPONDANCE_TYPE_EXTRAIT_LOCALE[typeExtrait.toLowerCase().trim()] ?? null;
 }
 
 /**
@@ -160,6 +164,9 @@ export function genererPlanDepuisReference(
   const k = Math.sqrt(surfaceEmpriseM2Cible / empriseReference);
   const largeurReferenceM = Number(plan.largeurM);
   const profondeurReferenceM = Number(plan.profondeurM);
+  if (!largeurReferenceM || !profondeurReferenceM) {
+    throw new Error("Le plan de référence n'a pas de largeur/profondeur renseignée");
+  }
 
   const niveauxReference = new Map<number, typeof pieces>();
   for (const piece of pieces) {
@@ -179,17 +186,23 @@ export function genererPlanDepuisReference(
 
   const niveaux: Niveau[] = indexNiveauxCibles.map((indexReference, indexCible) => {
     const piecesNiveau = niveauxReference.get(indexReference)!;
-    const piecesMisesEchelle: Piece[] = piecesNiveau.map((p, i) => ({
-      id: `ref-${indexCible}-${i}`,
-      type: mapperTypeExtraitLocal(p.typeExtrait),
-      nom: p.nom,
-      rect: {
-        x: Number(p.xM) * k,
-        y: Number(p.yM) * k,
-        width: Number(p.largeurM) * k,
-        height: Number(p.profondeurM) * k,
-      },
-    }));
+    const piecesMisesEchelle: Piece[] = piecesNiveau
+      .map((p, i) => {
+        const type = mapperTypeExtraitLocal(p.typeExtrait);
+        if (!type) return null;
+        return {
+          id: `ref-${indexCible}-${i}`,
+          type,
+          nom: p.nom,
+          rect: {
+            x: Number(p.xM) * k,
+            y: Number(p.yM) * k,
+            width: Number(p.largeurM) * k,
+            height: Number(p.profondeurM) * k,
+          },
+        };
+      })
+      .filter((p): p is Piece => p !== null);
 
     return {
       index: indexCible,
@@ -230,10 +243,13 @@ function piecesDuNiveau(
   // Circulation ajustable depuis Paramètres (ratio_circulation_par_m2_batie).
   const RATIO_SALON = ratios.salon ?? 0.22;
   const RATIO_CUISINE = ratios.cuisine ?? 0.1;
-  const RATIO_CIRCULATION = ratios.circulation ?? ratioCirculation;
+  // Le ratio de circulation reste piloté par le réglage admin (/parametres),
+  // même quand une banque de plans est disponible — contrairement aux autres
+  // ratios ci-dessous, il ne doit jamais être écrasé silencieusement.
+  const RATIO_CIRCULATION = ratioCirculation;
   const RATIO_WC_VISITEURS = ratios.wc ?? 0.03;
   const RATIO_SDB_PARENTS = ratios.sdb ?? 0.04;
-  const RATIO_SDB_SECONDAIRE = ratios.sdb ?? 0.035;
+  const RATIO_SDB_SECONDAIRE = ratios.sdb !== undefined ? ratios.sdb * (0.035 / 0.04) : 0.035;
 
   let surfaceFixeRatio = 0;
   if (niveauIndex === 0) {
