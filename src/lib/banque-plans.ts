@@ -4,6 +4,9 @@ import type { PlanReference, PlanReferencePiece } from "@/db/schema";
 import type { ExtractionPlan } from "@/lib/extraction-plan";
 import type { TypePiece } from "@/lib/plan-generator";
 import { eq } from "drizzle-orm";
+import { mapperTypeExtrait } from "@/lib/type-piece-mapping";
+
+export { mapperTypeExtrait } from "@/lib/type-piece-mapping";
 
 export function ratioPiece(
   piece: { surfaceM2: number | string },
@@ -86,21 +89,6 @@ export async function supprimerPlanReference(id: number): Promise<void> {
   await db.delete(plansReference).where(eq(plansReference.id, id));
 }
 
-const CORRESPONDANCE_TYPE_EXTRAIT: Record<string, TypePiece> = {
-  salon: "salon",
-  cuisine: "cuisine",
-  chambre: "chambre",
-  wc: "wc",
-  circulation: "circulation",
-  sdb: "sdb",
-};
-
-/** Mappe un libellé de type brut extrait d'un plan vers un TypePiece du
- * générateur. Retourne null pour tout libellé sans correspondance connue
- * (ex: "cour", "patio", "garage"). */
-export function mapperTypeExtrait(typeExtrait: string): TypePiece | null {
-  return CORRESPONDANCE_TYPE_EXTRAIT[typeExtrait.toLowerCase().trim()] ?? null;
-}
 
 export type PlanReferenceAvecPieces = { plan: PlanReference; pieces: PlanReferencePiece[] };
 

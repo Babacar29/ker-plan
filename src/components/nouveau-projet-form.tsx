@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { NouveauProjet, Projet } from "@/db/schema";
-import { mapperTypeExtrait, type PlanReferenceAvecPieces } from "@/lib/banque-plans";
+import type { PlanReferenceAvecPieces } from "@/lib/banque-plans";
+import { mapperTypeExtrait } from "@/lib/type-piece-mapping";
 
 type Etat = {
   nom: string;
