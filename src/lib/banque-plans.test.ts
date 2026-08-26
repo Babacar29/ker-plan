@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { db } from "@/db";
 import { plansReference } from "@/db/schema";
+import { inArray } from "drizzle-orm";
 import { ratioPiece, enregistrerExtraction, obtenirPlanReference, creerPlanReferenceBrouillon, mapperTypeExtrait, calculerRatiosDepuisBanque, validerPlanReference } from "./banque-plans";
 
 describe("ratioPiece", () => {
@@ -70,8 +71,25 @@ describe("mapperTypeExtrait", () => {
 });
 
 describe("calculerRatiosDepuisBanque", () => {
-  beforeEach(async () => {
-    await db.delete(plansReference);
+  let createdPlanIds: number[] = [];
+
+  beforeAll(async () => {
+    // Clean up any leftover validated plans from previous test runs
+    const allPlans = await db.select().from(plansReference);
+    const validatedIds = allPlans.filter((p) => p.statut === "valide").map((p) => p.id);
+    if (validatedIds.length > 0) {
+      await db.delete(plansReference).where(inArray(plansReference.id, validatedIds));
+    }
+  });
+
+  beforeEach(() => {
+    createdPlanIds = [];
+  });
+
+  afterEach(async () => {
+    if (createdPlanIds.length > 0) {
+      await db.delete(plansReference).where(inArray(plansReference.id, createdPlanIds));
+    }
   });
 
   it("retourne un mapping vide si aucun plan validé", async () => {
@@ -81,6 +99,7 @@ describe("calculerRatiosDepuisBanque", () => {
 
   it("calcule la moyenne des ratios sur plusieurs plans validés", async () => {
     const plan1 = await creerPlanReferenceBrouillon("https://example.com/p1.png");
+    createdPlanIds.push(plan1.id);
     await enregistrerExtraction(plan1.id, {
       empriseM2: 100,
       largeurM: 10,
@@ -93,6 +112,7 @@ describe("calculerRatiosDepuisBanque", () => {
     await validerPlanReference(plan1.id);
 
     const plan2 = await creerPlanReferenceBrouillon("https://example.com/p2.png");
+    createdPlanIds.push(plan2.id);
     await enregistrerExtraction(plan2.id, {
       empriseM2: 200,
       largeurM: 14,
