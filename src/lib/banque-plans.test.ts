@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { db } from "@/db";
 import { plansReference } from "@/db/schema";
 import { inArray } from "drizzle-orm";
-import { ratioPiece, enregistrerExtraction, obtenirPlanReference, creerPlanReferenceBrouillon, mapperTypeExtrait, calculerRatiosDepuisBanque, validerPlanReference } from "./banque-plans";
+import { ratioPiece, enregistrerExtraction, obtenirPlanReference, creerPlanReferenceBrouillon, mapperTypeExtrait, calculerRatiosDepuisBanque, validerPlanReference, listerPlansReferenceValides } from "./banque-plans";
 
 describe("ratioPiece", () => {
   it("calcule le ratio surface pièce / emprise", () => {
@@ -127,5 +127,43 @@ describe("calculerRatiosDepuisBanque", () => {
     const ratios = await calculerRatiosDepuisBanque();
     // (0.20 + 0.30) / 2 = 0.25
     expect(ratios.salon).toBeCloseTo(0.25, 5);
+  });
+});
+
+describe("listerPlansReferenceValides", () => {
+  it("exclut les plans brouillon", async () => {
+    const plan = await creerPlanReferenceBrouillon("https://example.com/brouillon.png");
+    await enregistrerExtraction(plan.id, {
+      empriseM2: 100, largeurM: 10, profondeurM: 10, nbNiveaux: 1,
+      pieces: [{ nom: "Chambre 1", typeExtrait: "chambre", surfaceM2: 12, niveauIndex: 0, xM: 0, yM: 0, largeurM: 3, profondeurM: 4 }],
+    });
+    const resultat = await listerPlansReferenceValides();
+    expect(resultat.find((p) => p.plan.id === plan.id)).toBeUndefined();
+  });
+
+  it("inclut un plan validé avec position complète", async () => {
+    const plan = await creerPlanReferenceBrouillon("https://example.com/complet.png");
+    await enregistrerExtraction(plan.id, {
+      empriseM2: 100, largeurM: 10, profondeurM: 10, nbNiveaux: 1,
+      pieces: [{ nom: "Chambre 1", typeExtrait: "chambre", surfaceM2: 12, niveauIndex: 0, xM: 0, yM: 0, largeurM: 3, profondeurM: 4 }],
+    });
+    await validerPlanReference(plan.id);
+    const resultat = await listerPlansReferenceValides();
+    expect(resultat.find((p) => p.plan.id === plan.id)).toBeDefined();
+  });
+
+  it("filtre par nbChambresMin", async () => {
+    const plan = await creerPlanReferenceBrouillon("https://example.com/2ch.png");
+    await enregistrerExtraction(plan.id, {
+      empriseM2: 100, largeurM: 10, profondeurM: 10, nbNiveaux: 1,
+      pieces: [
+        { nom: "Chambre 1", typeExtrait: "chambre", surfaceM2: 12, niveauIndex: 0, xM: 0, yM: 0, largeurM: 3, profondeurM: 4 },
+        { nom: "Chambre 2", typeExtrait: "chambre", surfaceM2: 12, niveauIndex: 0, xM: 3, yM: 0, largeurM: 3, profondeurM: 4 },
+      ],
+    });
+    await validerPlanReference(plan.id);
+
+    expect((await listerPlansReferenceValides(2)).find((p) => p.plan.id === plan.id)).toBeDefined();
+    expect((await listerPlansReferenceValides(3)).find((p) => p.plan.id === plan.id)).toBeUndefined();
   });
 });

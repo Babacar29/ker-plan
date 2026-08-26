@@ -104,6 +104,40 @@ export function mapperTypeExtrait(typeExtrait: string): TypePiece | null {
   return CORRESPONDANCE_TYPE_EXTRAIT[typeExtrait.toLowerCase().trim()] ?? null;
 }
 
+export type PlanReferenceAvecPieces = { plan: PlanReference; pieces: PlanReferencePiece[] };
+
+function positionComplete(piece: PlanReferencePiece): boolean {
+  return piece.xM !== null && piece.yM !== null && piece.largeurM !== null && piece.profondeurM !== null;
+}
+
+/** Liste les plans validés, avec leurs pièces, dont toutes les pièces ont
+ * une position complète (éligibles au mode copie-exacte) et dont le nombre
+ * de chambres est >= nbChambresMin si fourni. */
+export async function listerPlansReferenceValides(
+  nbChambresMin?: number
+): Promise<PlanReferenceAvecPieces[]> {
+  const plansValides = await db
+    .select()
+    .from(plansReference)
+    .where(eq(plansReference.statut, "valide"));
+
+  const resultat: PlanReferenceAvecPieces[] = [];
+  for (const plan of plansValides) {
+    const pieces = await db
+      .select()
+      .from(plansReferencePieces)
+      .where(eq(plansReferencePieces.planReferenceId, plan.id));
+
+    if (pieces.some((p) => !positionComplete(p))) continue;
+
+    const nbChambres = pieces.filter((p) => mapperTypeExtrait(p.typeExtrait) === "chambre").length;
+    if (nbChambresMin !== undefined && nbChambres < nbChambresMin) continue;
+
+    resultat.push({ plan, pieces });
+  }
+  return resultat;
+}
+
 /** Calcule, pour chaque TypePiece, le ratio moyen (surface pièce / emprise
  * du plan) sur l'ensemble des plans validés de la banque. Types non mappés
  * ignorés. Mapping vide si aucun plan validé. */
