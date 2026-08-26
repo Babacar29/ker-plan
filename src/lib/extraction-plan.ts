@@ -12,6 +12,11 @@ export const SchemaExtractionPlan = z.object({
       nom: z.string().min(1),
       typeExtrait: z.string().min(1),
       surfaceM2: z.number().positive(),
+      niveauIndex: z.number().int().min(0),
+      xM: z.number().min(0),
+      yM: z.number().min(0),
+      largeurM: z.number().positive(),
+      profondeurM: z.number().positive(),
     })
   ),
 });
@@ -26,8 +31,8 @@ Extrais les informations suivantes en respectant les conventions observées sur 
 - la surface totale de l'emprise au sol en m² (souvent affichée dans un encadré bleu)
 - la largeur et la profondeur de l'emprise en mètres (déduites des cotes en cm le long des bords, converties en mètres)
 - le nombre de niveaux (RDC seul = 1, RDC + étage = 2, etc.)
-- la liste des pièces avec leur nom tel qu'affiché (ex: "SDB", "CH1", "cour de service", "espace familial"), un type extrait normalisé en minuscules (ex: "chambre", "salon", "cuisine", "sdb", "wc", "circulation", "cour", "patio", "garage", ou un autre libellé court si aucun type standard ne correspond), et leur surface en m².
-Si une valeur n'est pas lisible sur le plan, fais la meilleure estimation possible à partir des cotes visibles plutôt que de l'omettre.`;
+- la liste des pièces avec : leur nom tel qu'affiché (ex: "SDB", "CH1", "cour de service", "espace familial") ; un type extrait normalisé en minuscules (ex: "chambre", "salon", "cuisine", "sdb", "wc", "circulation", "cour", "patio", "garage", ou un autre libellé court si aucun type standard ne correspond) ; leur surface en m² ; l'index du niveau où elles se trouvent (0 = RDC, 1 = premier étage, etc.) ; leur position (x, y) en mètres du coin haut-gauche de la pièce par rapport au coin haut-gauche de l'emprise du niveau (x vers la droite, y vers le bas) ; leur largeur et profondeur en mètres.
+Si une valeur n'est pas lisible sur le plan, fais la meilleure estimation possible à partir des cotes visibles plutôt que de l'omettre. Les positions et dimensions de toutes les pièces d'un même niveau doivent former un pavage cohérent de l'emprise de ce niveau, sans chevauchement.`;
 
 export async function extraireDonneesPlan(imageUrl: string): Promise<ExtractionPlan> {
   const { output } = (await generateText({

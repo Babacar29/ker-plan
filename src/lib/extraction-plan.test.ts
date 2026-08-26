@@ -17,8 +17,8 @@ describe("extraireDonneesPlan", () => {
       profondeurM: 12,
       nbNiveaux: 1,
       pieces: [
-        { nom: "Salon", typeExtrait: "salon", surfaceM2: 25 },
-        { nom: "CH1", typeExtrait: "chambre", surfaceM2: 12 },
+        { nom: "Salon", typeExtrait: "salon", surfaceM2: 25, niveauIndex: 0, xM: 0, yM: 0, largeurM: 5, profondeurM: 5 },
+        { nom: "CH1", typeExtrait: "chambre", surfaceM2: 12, niveauIndex: 0, xM: 5, yM: 0, largeurM: 3, profondeurM: 4 },
       ],
     };
     generateTextMock.mockResolvedValue({ output: donnees });
@@ -41,5 +41,43 @@ describe("extraireDonneesPlan", () => {
     generateTextMock.mockRejectedValue(new Error("timeout"));
 
     await expect(extraireDonneesPlan("https://blob.example/plan.png")).rejects.toThrow("timeout");
+  });
+});
+
+describe("SchemaExtractionPlan (phase 2 : position)", () => {
+  it("accepte une pièce avec niveau et position complète", () => {
+    const donnees = {
+      empriseM2: 100,
+      largeurM: 10,
+      profondeurM: 10,
+      nbNiveaux: 1,
+      pieces: [
+        {
+          nom: "Salon",
+          typeExtrait: "salon",
+          surfaceM2: 20,
+          niveauIndex: 0,
+          xM: 0,
+          yM: 0,
+          largeurM: 5,
+          profondeurM: 4,
+        },
+      ],
+    };
+    const parsed = SchemaExtractionPlan.parse(donnees);
+    expect(parsed.pieces[0].niveauIndex).toBe(0);
+    expect(parsed.pieces[0].xM).toBe(0);
+    expect(parsed.pieces[0].largeurM).toBe(5);
+  });
+
+  it("rejette une pièce sans position (champs désormais requis)", () => {
+    const donnees = {
+      empriseM2: 100,
+      largeurM: 10,
+      profondeurM: 10,
+      nbNiveaux: 1,
+      pieces: [{ nom: "Salon", typeExtrait: "salon", surfaceM2: 20 }],
+    };
+    expect(() => SchemaExtractionPlan.parse(donnees)).toThrow();
   });
 });
