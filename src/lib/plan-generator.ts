@@ -1,4 +1,5 @@
 import { layoutRects, type Rect } from "./layout/squarified-treemap";
+import type { PlanReferenceAvecPieces } from "./banque-plans";
 
 export type TypePiece =
   | "salon"
@@ -116,6 +117,91 @@ export function genererPlan(
       ],
     });
   }
+
+  return { niveaux };
+}
+
+const CORRESPONDANCE_TYPE_EXTRAIT_LOCALE: Record<string, TypePiece> = {
+  salon: "salon",
+  cuisine: "cuisine",
+  chambre: "chambre",
+  wc: "wc",
+  circulation: "circulation",
+  sdb: "sdb",
+};
+
+function mapperTypeExtraitLocal(typeExtrait: string): TypePiece {
+  return CORRESPONDANCE_TYPE_EXTRAIT_LOCALE[typeExtrait.toLowerCase().trim()] ?? "circulation";
+}
+
+/**
+ * Reproduit exactement l'agencement d'un plan de référence choisi par
+ * l'utilisateur, mis à l'échelle sur la surface cible du projet, avec
+ * troncature ou duplication de niveaux pour atteindre nbNiveauxCible.
+ * Ouvertures dérivées géométriquement via genererPortes/genererFenetres.
+ */
+export function genererPlanDepuisReference(
+  referencePlan: PlanReferenceAvecPieces,
+  surfaceEmpriseM2Cible: number,
+  nbNiveauxCible: number
+): Plan {
+  const { plan, pieces } = referencePlan;
+
+  const empriseReference = Number(plan.empriseM2);
+  if (!empriseReference) {
+    throw new Error("Le plan de référence n'a pas d'emprise renseignée");
+  }
+  if (pieces.some((p) => p.xM === null || p.yM === null || p.largeurM === null || p.profondeurM === null)) {
+    throw new Error(
+      "Ce plan n'a pas encore de positions extraites, réessaie l'extraction depuis /banque-plans avant de le choisir"
+    );
+  }
+
+  const k = Math.sqrt(surfaceEmpriseM2Cible / empriseReference);
+  const largeurReferenceM = Number(plan.largeurM);
+  const profondeurReferenceM = Number(plan.profondeurM);
+
+  const niveauxReference = new Map<number, typeof pieces>();
+  for (const piece of pieces) {
+    const liste = niveauxReference.get(piece.niveauIndex) ?? [];
+    liste.push(piece);
+    niveauxReference.set(piece.niveauIndex, liste);
+  }
+  const indexNiveauxTries = [...niveauxReference.keys()].sort((a, b) => a - b);
+
+  const indexNiveauxCibles: number[] = [];
+  for (let i = 0; i < nbNiveauxCible; i++) {
+    indexNiveauxCibles.push(indexNiveauxTries[Math.min(i, indexNiveauxTries.length - 1)]);
+  }
+
+  const largeurM = largeurReferenceM * k;
+  const profondeurM = profondeurReferenceM * k;
+
+  const niveaux: Niveau[] = indexNiveauxCibles.map((indexReference, indexCible) => {
+    const piecesNiveau = niveauxReference.get(indexReference)!;
+    const piecesMisesEchelle: Piece[] = piecesNiveau.map((p, i) => ({
+      id: `ref-${indexCible}-${i}`,
+      type: mapperTypeExtraitLocal(p.typeExtrait),
+      nom: p.nom,
+      rect: {
+        x: Number(p.xM) * k,
+        y: Number(p.yM) * k,
+        width: Number(p.largeurM) * k,
+        height: Number(p.profondeurM) * k,
+      },
+    }));
+
+    return {
+      index: indexCible,
+      largeurM,
+      profondeurM,
+      pieces: piecesMisesEchelle,
+      ouvertures: [
+        ...genererPortes(piecesMisesEchelle),
+        ...genererFenetres(piecesMisesEchelle, largeurM, profondeurM),
+      ],
+    };
+  });
 
   return { niveaux };
 }
