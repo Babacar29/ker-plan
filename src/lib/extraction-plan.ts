@@ -1,4 +1,5 @@
 import { generateText, Output } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
 
 export const SchemaExtractionPlan = z.object({
@@ -17,7 +18,8 @@ export const SchemaExtractionPlan = z.object({
 
 export type ExtractionPlan = z.infer<typeof SchemaExtractionPlan>;
 
-const MODELE_VISION = "anthropic/claude-sonnet-5";
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+const MODELE_VISION = google("gemini-3.6-flash");
 
 const PROMPT_EXTRACTION = `Tu es un architecte qui lit un plan de maison réel (capture d'écran ou photo).
 Extrais les informations suivantes en respectant les conventions observées sur ce type de plan :
