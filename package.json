@@ -15,10 +15,12 @@
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.44",
+    "@ai-sdk/google": "^4.0.51",
     "@base-ui/react": "^1.7.0",
     "@neondatabase/serverless": "^1.1.0",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
+    "@vercel/blob": "^2.8.0",
     "ai": "^7.0.56",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
