@@ -68,7 +68,8 @@ export function genererPlan(
   reponses: ReponsesQuestionnaire,
   surfaceEmpriseM2: number,
   nbNiveaux: number,
-  ratioCirculation: number = RATIO_CIRCULATION_DEFAUT
+  ratioCirculation: number = RATIO_CIRCULATION_DEFAUT,
+  ratios: Partial<Record<TypePiece, number>> = {}
 ): Plan {
   const surfaceParNiveau = surfaceEmpriseM2;
   const largeurM = Math.sqrt(surfaceParNiveau * ASPECT_RATIO_EMPRISE);
@@ -89,7 +90,8 @@ export function genererPlan(
       chambresToiletteInterneParNiveau[index],
       reponses.toilettesVisiteurs,
       surfaceParNiveau,
-      ratioCirculation
+      ratioCirculation,
+      ratios
     );
     const rects = layoutRects(
       items.map((it) => ({ id: it.id, weight: it.surfaceCibleM2 })),
@@ -130,7 +132,8 @@ function piecesDuNiveau(
   nbChambresAvecToiletteInterne: number,
   toilettesVisiteurs: boolean,
   surfaceParNiveau: number,
-  ratioCirculation: number
+  ratioCirculation: number,
+  ratios: Partial<Record<TypePiece, number>>
 ): { id: string; type: TypePiece; nom: string; surfaceCibleM2: number }[] {
   const pieces: { id: string; type: TypePiece; nom: string; surfaceCibleM2: number }[] = [];
 
@@ -139,12 +142,12 @@ function piecesDuNiveau(
   // généreux, WC visiteurs réduit — la chambre parents récupère la surface
   // économisée sous forme de salle de bain privative systématique.
   // Circulation ajustable depuis Paramètres (ratio_circulation_par_m2_batie).
-  const RATIO_SALON = 0.22;
-  const RATIO_CUISINE = 0.1;
-  const RATIO_CIRCULATION = ratioCirculation;
-  const RATIO_WC_VISITEURS = 0.03;
-  const RATIO_SDB_PARENTS = 0.04;
-  const RATIO_SDB_SECONDAIRE = 0.035;
+  const RATIO_SALON = ratios.salon ?? 0.22;
+  const RATIO_CUISINE = ratios.cuisine ?? 0.1;
+  const RATIO_CIRCULATION = ratios.circulation ?? ratioCirculation;
+  const RATIO_WC_VISITEURS = ratios.wc ?? 0.03;
+  const RATIO_SDB_PARENTS = ratios.sdb ?? 0.04;
+  const RATIO_SDB_SECONDAIRE = ratios.sdb ?? 0.035;
 
   let surfaceFixeRatio = 0;
   if (niveauIndex === 0) {
