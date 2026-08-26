@@ -26,9 +26,7 @@ export async function listerPlansReference(): Promise<PlanReference[]> {
   return db.select().from(plansReference).orderBy(plansReference.createdAt);
 }
 
-export async function obtenirPlanReference(
-  id: number
-): Promise<{ plan: PlanReference; pieces: PlanReferencePiece[] } | null> {
+export async function obtenirPlanReference(id: number): Promise<PlanReferenceAvecPieces | null> {
   const [plan] = await db.select().from(plansReference).where(eq(plansReference.id, id));
   if (!plan) return null;
   const pieces = await db
