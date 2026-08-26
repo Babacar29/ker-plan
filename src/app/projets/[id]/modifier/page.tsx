@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getSession } from "@/lib/auth";
 import { obtenirProjet } from "@/lib/projets";
+import { listerPlansReferenceValides } from "@/lib/banque-plans";
 import { NouveauProjetForm } from "@/components/nouveau-projet-form";
 
 export default async function ModifierProjetPage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,6 +14,8 @@ export default async function ModifierProjetPage({ params }: { params: Promise<{
   const projet = await obtenirProjet(Number(id), session.user.id);
   if (!projet) notFound();
 
+  const plansDisponibles = await listerPlansReferenceValides();
+
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
       <Link
@@ -22,7 +25,7 @@ export default async function ModifierProjetPage({ params }: { params: Promise<{
         <ArrowLeft className="size-4" />
         Retour au projet
       </Link>
-      <NouveauProjetForm projetExistant={projet} />
+      <NouveauProjetForm projetExistant={projet} plansDisponibles={plansDisponibles} />
     </div>
   );
 }

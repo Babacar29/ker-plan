@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { NouveauProjet, Projet } from "@/db/schema";
+import type { PlanReferenceAvecPieces } from "@/lib/banque-plans";
 
 type Etat = {
   nom: string;
@@ -28,6 +29,7 @@ type Etat = {
   typeToiture: NouveauProjet["typeToiture"];
   standing: NouveauProjet["standing"];
   modeBriques: NouveauProjet["modeBriques"];
+  planReferenceId: number | null;
 };
 
 const ETAT_INITIAL: Etat = {
@@ -43,6 +45,7 @@ const ETAT_INITIAL: Etat = {
   typeToiture: "dalle_beton",
   standing: "moyen",
   modeBriques: "usine",
+  planReferenceId: null,
 };
 
 function etatDepuisProjet(projet: Projet): Etat {
@@ -65,10 +68,17 @@ function etatDepuisProjet(projet: Projet): Etat {
     typeToiture: projet.typeToiture,
     standing: projet.standing,
     modeBriques: projet.modeBriques,
+    planReferenceId: projet.planReferenceId,
   };
 }
 
-export function NouveauProjetForm({ projetExistant }: { projetExistant?: Projet }) {
+export function NouveauProjetForm({
+  projetExistant,
+  plansDisponibles,
+}: {
+  projetExistant?: Projet;
+  plansDisponibles: PlanReferenceAvecPieces[];
+}) {
   const [etat, setEtat] = useState<Etat>(
     projetExistant ? etatDepuisProjet(projetExistant) : ETAT_INITIAL
   );
@@ -78,6 +88,11 @@ export function NouveauProjetForm({ projetExistant }: { projetExistant?: Projet 
   function majChamp<K extends keyof Etat>(champ: K, valeur: Etat[K]) {
     setEtat((precedent) => ({ ...precedent, [champ]: valeur }));
   }
+
+  const nbChambresDemande = Number(etat.nbChambres) || 0;
+  const plansCompatibles = plansDisponibles.filter(
+    (p) => p.pieces.filter((piece) => piece.typeExtrait.toLowerCase() === "chambre").length >= nbChambresDemande
+  );
 
   function soumettre() {
     const surfaceTerrainM2 = Number(etat.surfaceTerrainM2);
@@ -108,6 +123,7 @@ export function NouveauProjetForm({ projetExistant }: { projetExistant?: Projet 
       typeToiture: etat.typeToiture,
       standing: etat.standing,
       modeBriques: etat.modeBriques,
+      planReferenceId: etat.planReferenceId,
       reponsesQuestionnaire: {
         nbChambres,
         salonOuvertSurCuisine: false,
@@ -185,6 +201,45 @@ export function NouveauProjetForm({ projetExistant }: { projetExistant?: Projet 
               value={etat.nbNiveaux}
               onChange={(e) => majChamp("nbNiveaux", e.target.value)}
             />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Plan de référence (optionnel)</Label>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => majChamp("planReferenceId", null)}
+              className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                etat.planReferenceId === null
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <div className="mb-2 flex h-20 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+                Auto
+              </div>
+              Aucun — génération automatique
+            </button>
+            {plansCompatibles.map(({ plan, pieces }) => (
+              <button
+                key={plan.id}
+                type="button"
+                onClick={() => majChamp("planReferenceId", plan.id)}
+                className={`rounded-lg border p-3 text-left text-sm transition-colors ${
+                  etat.planReferenceId === plan.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50"
+                }`}
+              >
+                <img
+                  src={plan.imageUrl}
+                  alt={`Plan de référence ${plan.id}`}
+                  className="mb-2 h-20 w-full rounded object-cover"
+                />
+                {Number(plan.empriseM2)} m² · {pieces.length} pièces
+              </button>
+            ))}
           </div>
         </div>
 

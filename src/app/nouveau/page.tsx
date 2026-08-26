@@ -2,11 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getSession } from "@/lib/auth";
+import { listerPlansReferenceValides } from "@/lib/banque-plans";
 import { NouveauProjetForm } from "@/components/nouveau-projet-form";
 
 export default async function NouveauProjetPage() {
   const session = await getSession();
   if (!session) redirect("/login");
+
+  const plansDisponibles = await listerPlansReferenceValides();
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-12">
@@ -17,7 +20,7 @@ export default async function NouveauProjetPage() {
         <ArrowLeft className="size-4" />
         Retour aux projets
       </Link>
-      <NouveauProjetForm />
+      <NouveauProjetForm plansDisponibles={plansDisponibles} />
     </div>
   );
 }
