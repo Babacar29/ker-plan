@@ -55,6 +55,11 @@ export async function enregistrerExtraction(id: number, donnees: ExtractionPlan)
         nom: p.nom,
         typeExtrait: p.typeExtrait,
         surfaceM2: String(p.surfaceM2),
+        niveauIndex: p.niveauIndex,
+        xM: String(p.xM),
+        yM: String(p.yM),
+        largeurM: String(p.largeurM),
+        profondeurM: String(p.profondeurM),
       }))
     );
   }
