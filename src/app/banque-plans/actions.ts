@@ -39,9 +39,10 @@ export async function uploaderPlanAction(formData: FormData): Promise<void> {
   try {
     const donnees = await extraireDonneesPlan(blob.url);
     await enregistrerExtraction(plan.id, donnees);
-  } catch {
+  } catch (erreur) {
     // La ligne existe déjà avec l'image seule ; l'écran de revue affiche
     // "extraction échouée" et propose de relancer via relancerExtractionAction.
+    console.error(`Extraction échouée pour le plan ${plan.id}`, erreur);
   }
 
   revalidatePath("/banque-plans");
@@ -53,8 +54,9 @@ export async function relancerExtractionAction(id: number, imageUrl: string): Pr
   try {
     const donnees = await extraireDonneesPlan(imageUrl);
     await enregistrerExtraction(id, donnees);
-  } catch {
+  } catch (erreur) {
     // Extraction toujours en échec ; l'écran de revue reste sur "extraction échouée".
+    console.error(`Réessai d'extraction échoué pour le plan ${id}`, erreur);
   }
   revalidatePath(`/banque-plans/${id}`);
 }
