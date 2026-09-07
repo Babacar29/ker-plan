@@ -84,6 +84,31 @@ export async function creerProjet(input: CreationProjet, userId: number): Promis
   return projet;
 }
 
+export async function dupliquerProjet(id: number, userId: number): Promise<Projet | undefined> {
+  const original = await obtenirProjet(id, userId);
+  if (!original) return undefined;
+
+  const [copie] = await db
+    .insert(projets)
+    .values({
+      userId,
+      nom: `${original.nom} (copie)`,
+      surfaceTerrainM2: original.surfaceTerrainM2,
+      surfaceBatieM2: original.surfaceBatieM2,
+      typeStructure: original.typeStructure,
+      nbNiveaux: original.nbNiveaux,
+      typeToiture: original.typeToiture,
+      standing: original.standing,
+      modeBriques: original.modeBriques,
+      reponsesQuestionnaire: original.reponsesQuestionnaire,
+      planReferenceId: original.planReferenceId,
+      planGenere: original.planGenere,
+    })
+    .returning();
+
+  return copie;
+}
+
 export async function supprimerProjet(id: number, userId: number): Promise<void> {
   await db.delete(projets).where(and(eq(projets.id, id), eq(projets.userId, userId)));
 }

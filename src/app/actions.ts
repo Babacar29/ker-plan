@@ -7,7 +7,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
-import { creerProjet, supprimerProjet, modifierProjet, type CreationProjet } from "@/lib/projets";
+import { creerProjet, supprimerProjet, modifierProjet, dupliquerProjet, type CreationProjet } from "@/lib/projets";
 import { mettreAJourPrixMateriau, mettreAJourForfaitMainOeuvre, mettreAJourRatio } from "@/lib/params";
 import {
   hashMotDePasse,
@@ -26,6 +26,17 @@ export async function creerProjetAction(input: CreationProjet) {
   const projet = await creerProjet(input, session.user.id);
   revalidatePath("/");
   redirect(`/projets/${projet.id}`);
+}
+
+export async function dupliquerProjetAction(id: number) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+
+  const copie = await dupliquerProjet(id, session.user.id);
+  if (!copie) redirect("/");
+
+  revalidatePath("/");
+  redirect(`/projets/${copie.id}`);
 }
 
 export async function supprimerProjetAction(id: number) {
